@@ -14,12 +14,12 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleLogin({ email, password })
-        navigate('/')
+        const success = await handleLogin({ email, password })
+        if(success) navigate('/')
     }
 
     if (loading) {
-        return (<main><h1>Loading...</h1></main>)
+        return (<main><h1>Loading...lll</h1></main>)
     }
 
     return (

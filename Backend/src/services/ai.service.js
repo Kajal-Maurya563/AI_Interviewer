@@ -34,11 +34,28 @@ const interviewReportSchema = z.object({
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
-
     const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}
                         Job Description: ${jobDescription}
+
+                        You MUST respond with ONLY a valid JSON object with EXACTLY these fields:
+                        {
+                            "title": "job title string",
+                            "matchScore": number between 0-100,
+                            "technicalQuestions": [
+                                { "question": "string", "intention": "string", "answer": "string" }
+                            ],
+                            "behavioralQuestions": [
+                                { "question": "string", "intention": "string", "answer": "string" }
+                            ],
+                            "skillGaps": [
+                                { "skill": "string", "severity": "low" or "medium" or "high" }
+                            ],
+                            "preparationPlan": [
+                                { "day": number, "focus": "string", "tasks": ["string"] }
+                            ]
+                        }
 `
 
     const response = await ai.models.generateContent({
@@ -51,14 +68,17 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
     })
 
     return JSON.parse(response.text)
-
-
 }
 
 
 
 async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch()
+    // const browser = await puppeteer.launch()
+
+    const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+})
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" })
 
@@ -112,5 +132,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
     return pdfBuffer
 
 }
-
 module.exports = { generateInterviewReport, generateResumePdf }
+
+
+

@@ -18,7 +18,7 @@ async function generateInterViewReportController(req, res) {
             jobDescription
         })
 
-        console.log("AI RESPONSE:", JSON.stringify(interViewReportByAi, null, 2)) 
+        // console.log("AI RESPONSE:", JSON.stringify(interViewReportByAi, null, 2)) 
 
         const interviewReport = await interviewReportModel.create({
             user: req.user.id,
@@ -33,7 +33,7 @@ async function generateInterViewReportController(req, res) {
             interviewReport
         })
     } catch (err) {
-        console.log("ERROR:", err)
+        // console.log("ERROR:", err)
         res.status(500).json({ message: "Internal server error" })
     }
 }
@@ -94,6 +94,7 @@ async function generateResumePdfController(req, res) {
 
         res.send(pdfBuffer)
     } catch (err) {
+        // console.log("PDF ERROR:", err)
         res.status(500).json({ message: "Internal server error" })
     }
 }

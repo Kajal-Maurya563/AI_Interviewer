@@ -22,7 +22,7 @@ const interviewReportSchema = z.object({
     })).describe("Behavioral questions that can be asked in the interview along with their intention and how to answer them"),
     skillGaps: z.array(z.object({
         skill: z.string().describe("The skill which the candidate is lacking"),
-        severity: z.enum([ "low", "medium", "high" ]).describe("The severity of this skill gap, i.e. how important is this skill for the job and how much it can impact the candidate's chances")
+        severity: z.enum(["low", "medium", "high"]).describe("The severity of this skill gap, i.e. how important is this skill for the job and how much it can impact the candidate's chances")
     })).describe("List of skill gaps in the candidate's profile along with their severity"),
     preparationPlan: z.array(z.object({
         day: z.number().describe("The day number in the preparation plan, starting from 1"),
@@ -32,53 +32,103 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated"),
 })
 
+// async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
+
+//     const prompt = `Generate an interview report for a candidate with the following details:
+//                         Resume: ${resume}
+//                         Self Description: ${selfDescription}
+//                         Job Description: ${jobDescription}
+
+//                         You MUST respond with ONLY a valid JSON object with EXACTLY these fields:
+//                         {
+//                             "title": "job title string",
+//                             "matchScore": number between 0-100,
+//                             "technicalQuestions": [
+//                                 { "question": "string", "intention": "string", "answer": "string" }
+//                             ],
+//                             "behavioralQuestions": [
+//                                 { "question": "string", "intention": "string", "answer": "string" }
+//                             ],
+//                             "skillGaps": [
+//                                 { "skill": "string", "severity": "low" or "medium" or "high" }
+//                             ],
+//                             "preparationPlan": [
+//                                 { "day": number, "focus": "string", "tasks": ["string"] }
+//                             ]
+//                         }
+// `
+
+//     const response = await ai.models.generateContent({
+//         model: "gemini-3-flash-preview",
+//         contents: prompt,
+//         config: {
+//             responseMimeType: "application/json",
+//             responseSchema: zodToJsonSchema(interviewReportSchema),
+//         }
+//     })
+
+
+//     const rawText = response.text
+//     console.log("RAW RESPONSE:", rawText)
+//     return JSON.parse(rawText)
+
+//     // return JSON.parse(response.text)
+// }
+
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
-    const prompt = `Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
+    const prompt = `You are a JSON API. Return ONLY a valid JSON object, nothing else. No markdown, no explanation.
 
-                        You MUST respond with ONLY a valid JSON object with EXACTLY these fields:
-                        {
-                            "title": "job title string",
-                            "matchScore": number between 0-100,
-                            "technicalQuestions": [
-                                { "question": "string", "intention": "string", "answer": "string" }
-                            ],
-                            "behavioralQuestions": [
-                                { "question": "string", "intention": "string", "answer": "string" }
-                            ],
-                            "skillGaps": [
-                                { "skill": "string", "severity": "low" or "medium" or "high" }
-                            ],
-                            "preparationPlan": [
-                                { "day": number, "focus": "string", "tasks": ["string"] }
-                            ]
-                        }
-`
+Resume: ${resume}
+Self Description: ${selfDescription}
+Job Description: ${jobDescription}
+
+Return this exact JSON structure:
+{
+    "title": "the job title",
+    "matchScore": 80,
+    "technicalQuestions": [
+        { "question": "question text", "intention": "intention text", "answer": "answer text" },
+        { "question": "question text", "intention": "intention text", "answer": "answer text" },
+        { "question": "question text", "intention": "intention text", "answer": "answer text" }
+    ],
+    "behavioralQuestions": [
+        { "question": "question text", "intention": "intention text", "answer": "answer text" },
+        { "question": "question text", "intention": "intention text", "answer": "answer text" }
+    ],
+    "skillGaps": [
+        { "skill": "skill name", "severity": "low" },
+        { "skill": "skill name", "severity": "medium" },
+        { "skill": "skill name", "severity": "high" }
+    ],
+    "preparationPlan": [
+        { "day": 1, "focus": "focus area", "tasks": ["task 1", "task 2"] },
+        { "day": 2, "focus": "focus area", "tasks": ["task 1", "task 2"] },
+        { "day": 3, "focus": "focus area", "tasks": ["task 1", "task 2"] }
+    ]
+}`
 
     const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
         }
     })
 
-    return JSON.parse(response.text)
+    const rawText = response.text.trim()
+    // console.log("RAW RESPONSE:", rawText)
+    return JSON.parse(rawText)
 }
-
 
 
 async function generatePdfFromHtml(htmlContent) {
     // const browser = await puppeteer.launch()
 
     const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-})
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    })
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" })
 
@@ -102,18 +152,38 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
         html: z.string().describe("The HTML content of the resume which can be converted to PDF using any library like puppeteer")
     })
 
-    const prompt = `Generate resume for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
+    // const prompt = `Generate resume for a candidate with the following details:
+    //                     Resume: ${resume}
+    //                     Self Description: ${selfDescription}
+    //                     Job Description: ${jobDescription}
 
-                        the response should be a JSON object with a single field "html" which contains the HTML content of the resume which can be converted to PDF using any library like puppeteer.
-                        The resume should be tailored for the given job description and should highlight the candidate's strengths and relevant experience. The HTML content should be well-formatted and structured, making it easy to read and visually appealing.
-                        The content of resume should be not sound like it's generated by AI and should be as close as possible to a real human-written resume.
-                        you can highlight the content using some colors or different font styles but the overall design should be simple and professional.
-                        The content should be ATS friendly, i.e. it should be easily parsable by ATS systems without losing important information.
-                        The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
-                    `
+    //                     the response should be a JSON object with a single field "html" which contains the HTML content of the resume which can be converted to PDF using any library like puppeteer.
+    //                     The resume should be tailored for the given job description and should highlight the candidate's strengths and relevant experience. The HTML content should be well-formatted and structured, making it easy to read and visually appealing.
+    //                     The content of resume should be not sound like it's generated by AI and should be as close as possible to a real human-written resume.
+    //                     you can highlight the content using some colors or different font styles but the overall design should be simple and professional.
+    //                     The content should be ATS friendly, i.e. it should be easily parsable by ATS systems without losing important information.
+    //                     The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
+    //                 `
+
+    const prompt = `You are a professional resume writer. Generate a highly tailored, ATS-friendly resume in HTML format.
+
+                    Use ONLY the following candidate information — do not invent or add anything that is not mentioned below:
+
+                    Resume/Experience: ${resume}
+                    Self Description: ${selfDescription}
+                    Target Job Description: ${jobDescription}
+
+                    Requirements:
+                    - Use ONLY real information from the candidate data above
+                    - Do NOT invent projects, skills, or experience not mentioned
+                    - Tailor the resume specifically for the target job description
+                    - Make it ATS-friendly with clean HTML, no images, no tables for layout
+                    - Use a professional clean design with simple CSS inline styles
+                    - Max 2 pages when converted to PDF
+                    - Sections: Summary, Skills, Projects/Experience, Education, Achievements (only include sections that have real data)
+                    - The tone should sound human-written, not AI-generated
+
+                    Return a JSON object with a single field "html" containing the complete HTML with inline CSS.`
 
     const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
